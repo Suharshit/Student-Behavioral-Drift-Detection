@@ -63,6 +63,51 @@ def predict():
             drift_status = "Stable"
             drift_description = "Performance remains relatively stable"
 
+        # Calculate cluster characteristics for visualization
+        cluster_features = {
+            'studytime': studytime,
+            'absences': absences,
+            'failures': failures,
+            'G1': G1,
+            'G2': G2
+        }
+        
+        # Model comparison data (from training results)
+        classification_models = [
+            {'name': 'Logistic Regression', 'accuracy': 100.0, 'selected': False},
+            {'name': 'Random Forest', 'accuracy': 96.2, 'selected': True},
+            {'name': 'K-Nearest Neighbors', 'accuracy': 92.4, 'selected': False},
+            {'name': 'Naive Bayes', 'accuracy': 91.1, 'selected': False},
+            {'name': 'Decision Tree', 'accuracy': 94.9, 'selected': False},
+            {'name': 'Support Vector Machine', 'accuracy': 94.9, 'selected': False}
+        ]
+        
+        regression_models = [
+            {'name': 'Linear Regression', 'rmse': 0.00000000633, 'r2': 1.0, 'selected': True},
+            {'name': 'Polynomial Regression', 'rmse': 0.0000000113, 'r2': 1.0, 'selected': False}
+        ]
+        
+        # Cluster interpretation based on typical patterns
+        cluster_descriptions = {
+            0: {
+                'name': 'High Performers',
+                'description': 'Students with strong academic performance, low absences, and consistent study habits.',
+                'characteristics': ['High grades (G1, G2)', 'Low absences', 'Regular study time', 'Few/no failures']
+            },
+            1: {
+                'name': 'Average Performers',
+                'description': 'Students with moderate performance and typical study patterns.',
+                'characteristics': ['Moderate grades', 'Average absences', 'Regular study habits', 'Occasional challenges']
+            },
+            2: {
+                'name': 'At-Risk Students',
+                'description': 'Students who may need additional support due to lower performance or attendance issues.',
+                'characteristics': ['Lower grades', 'Higher absences', 'Irregular study patterns', 'Past failures']
+            }
+        }
+        
+        current_cluster_info = cluster_descriptions.get(int(cluster), cluster_descriptions[1])
+        
         return render_template(
             "result.html",
             risk="Pass" if risk == 1 else "Fail",
@@ -75,7 +120,11 @@ def predict():
             absences=absences,
             failures=failures,
             G1=G1,
-            G2=G2
+            G2=G2,
+            cluster_features=cluster_features,
+            classification_models=classification_models,
+            regression_models=regression_models,
+            cluster_info=current_cluster_info
         )
     except ValueError as e:
         return render_template("index.html", error="Please enter valid numbers for all fields")

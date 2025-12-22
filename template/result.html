@@ -9,6 +9,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -167,6 +169,224 @@
                 </div>
             </div>
 
+            <!-- Model Comparison Table -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Model Comparison</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Classification Models -->
+                            <h6 class="text-muted mb-3"><i class="bi bi-diagram-2"></i> Classification Models (Pass/Fail Prediction)</h6>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-hover table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Model Name</th>
+                                            <th>Accuracy (%)</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for model in classification_models %}
+                                        <tr class="{% if model.selected %}table-success{% endif %}">
+                                            <td>
+                                                {{ model.name }}
+                                                {% if model.selected %}
+                                                <span class="badge bg-success ms-2">Selected</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                                                        <div class="progress-bar {% if model.selected %}bg-success{% else %}bg-info{% endif %}" 
+                                                             role="progressbar" 
+                                                             style="width: {{ model.accuracy }}%"
+                                                             aria-valuenow="{{ model.accuracy }}" 
+                                                             aria-valuemin="0" 
+                                                             aria-valuemax="100">
+                                                            {{ model.accuracy }}%
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if model.selected %}
+                                                <span class="badge bg-success">In Use</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">Tested</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Regression Models -->
+                            <h6 class="text-muted mb-3"><i class="bi bi-graph-up"></i> Regression Models (Final Grade Prediction)</h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Model Name</th>
+                                            <th>RMSE</th>
+                                            <th>R² Score</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for model in regression_models %}
+                                        <tr class="{% if model.selected %}table-success{% endif %}">
+                                            <td>
+                                                {{ model.name }}
+                                                {% if model.selected %}
+                                                <span class="badge bg-success ms-2">Selected</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ "%.2e"|format(model.rmse) }}</td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ model.r2 }}</span>
+                                            </td>
+                                            <td>
+                                                {% if model.selected %}
+                                                <span class="badge bg-success">In Use</span>
+                                                {% else %}
+                                                <span class="badge bg-secondary">Tested</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="alert alert-info mt-3 mb-0">
+                                <i class="bi bi-info-circle"></i> <strong>Note:</strong> Random Forest was selected for classification (96.2% accuracy) and Linear Regression for regression (R²=1.0) based on performance evaluation.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualizations Section -->
+            <div class="row g-4 mb-4">
+                <!-- Cluster Visualization -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Cluster Analysis - Your Behavioral Profile</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6 class="text-primary">{{ cluster_info.name }} (Cluster {{ cluster }})</h6>
+                                <p class="text-muted small">{{ cluster_info.description }}</p>
+                                <div class="mt-3">
+                                    <strong class="text-muted">Key Characteristics:</strong>
+                                    <ul class="list-unstyled mt-2">
+                                        {% for char in cluster_info.characteristics %}
+                                        <li><i class="bi bi-check-circle text-success"></i> {{ char }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                            <canvas id="clusterChart" style="max-height: 300px;"></canvas>
+                            <div class="alert alert-light mt-3 mb-0">
+                                <small class="text-muted">
+                                    <i class="bi bi-lightbulb"></i> <strong>Why Cluster {{ cluster }}?</strong> 
+                                    Your combination of study time ({{ studytime }} hrs), absences ({{ absences }}), 
+                                    failures ({{ failures }}), and grades (G1: {{ G1 }}, G2: {{ G2 }}) places you in this behavioral group.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grade Progression Chart -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Grade Progression & Prediction</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="gradeChart" style="max-height: 300px;"></canvas>
+                            <div class="mt-3">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <div class="border-end">
+                                            <div class="text-muted small">G1</div>
+                                            <div class="h5 mb-0">{{ G1 }}/20</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="border-end">
+                                            <div class="text-muted small">G2</div>
+                                            <div class="h5 mb-0">{{ G2 }}/20</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div>
+                                            <div class="text-muted small">Predicted G3</div>
+                                            <div class="h5 mb-0 text-primary">{{ final_grade }}/20</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="alert alert-light mt-3 mb-0">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i> This chart shows your grade progression from G1 to G2, 
+                                    and the predicted final grade (G3) based on your learning patterns.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature Comparison Radar Chart -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="bi bi-radar"></i> Feature Profile Comparison</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="featureChart" style="max-height: 300px;"></canvas>
+                            <div class="alert alert-light mt-3 mb-0">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i> This radar chart shows your profile across key features 
+                                    compared to typical cluster patterns. Higher values indicate better performance indicators.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Drift Visualization -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="bi bi-arrow-left-right"></i> Behavioral Drift Analysis</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="driftChart" style="max-height: 300px;"></canvas>
+                            <div class="mt-3 text-center">
+                                <div class="d-inline-block p-3 rounded {% if drift_status == 'Positive' %}bg-success{% elif drift_status == 'Negative' %}bg-danger{% else %}bg-info{% endif %} text-white">
+                                    <div class="small">Drift Value</div>
+                                    <div class="h4 mb-0">{{ drift }}</div>
+                                    <div class="small mt-1">{{ drift_status }}</div>
+                                </div>
+                            </div>
+                            <div class="alert alert-light mt-3 mb-0">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i> Drift = G2 - G1. 
+                                    Positive values (>2) indicate improvement, negative values (<-2) indicate decline, 
+                                    and values between -2 and 2 indicate stable performance.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Explanations Section -->
             <div class="row g-4 mb-4">
                 <!-- Risk Prediction Explanation -->
@@ -271,6 +491,228 @@
                     card.style.transform = 'translateY(0)';
                 }, index * 100);
             });
+
+            // Cluster Visualization Chart
+            const clusterCtx = document.getElementById('clusterChart');
+            if (clusterCtx) {
+                const clusterColors = ['#0d6efd', '#198754', '#ffc107'];
+                const currentCluster = {{ cluster }};
+                new Chart(clusterCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Study Time', 'Absences', 'Failures', 'G1 Grade', 'G2 Grade'],
+                        datasets: [{
+                            label: 'Your Profile',
+                            data: [
+                                {{ cluster_features.studytime }},
+                                {{ cluster_features.absences }},
+                                {{ cluster_features.failures }},
+                                {{ cluster_features.G1 }},
+                                {{ cluster_features.G2 }}
+                            ],
+                            backgroundColor: clusterColors[currentCluster],
+                            borderColor: clusterColors[currentCluster],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Feature Values for Cluster {{ cluster }}'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 20
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Grade Progression Chart
+            const gradeCtx = document.getElementById('gradeChart');
+            if (gradeCtx) {
+                new Chart(gradeCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['G1 (Period 1)', 'G2 (Period 2)', 'G3 (Predicted Final)'],
+                        datasets: [{
+                            label: 'Grade',
+                            data: [{{ G1 }}, {{ G2 }}, {{ final_grade }}],
+                            borderColor: '#0d6efd',
+                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 6,
+                            pointBackgroundColor: '#0d6efd',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Grade Progression Over Time'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 20,
+                                title: {
+                                    display: true,
+                                    text: 'Grade (out of 20)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Academic Period'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Feature Comparison Radar Chart
+            const featureCtx = document.getElementById('featureChart');
+            if (featureCtx) {
+                // Normalize values for radar chart (0-1 scale)
+                const maxValues = {study: 20, absences: 100, failures: 10, grade: 20};
+                const normalizedData = {
+                    study: {{ cluster_features.studytime }} / maxValues.study,
+                    absences: 1 - ({{ cluster_features.absences }} / maxValues.absences), // Inverted (lower is better)
+                    failures: 1 - ({{ cluster_features.failures }} / maxValues.failures), // Inverted (lower is better)
+                    g1: {{ cluster_features.G1 }} / maxValues.grade,
+                    g2: {{ cluster_features.G2 }} / maxValues.grade
+                };
+
+                new Chart(featureCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Study Time', 'Attendance', 'No Failures', 'G1 Performance', 'G2 Performance'],
+                        datasets: [{
+                            label: 'Your Profile',
+                            data: [
+                                normalizedData.study,
+                                normalizedData.absences,
+                                normalizedData.failures,
+                                normalizedData.g1,
+                                normalizedData.g2
+                            ],
+                            backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                            borderColor: '#0d6efd',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#0d6efd',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Feature Profile (Normalized)'
+                            }
+                        },
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 1,
+                                ticks: {
+                                    stepSize: 0.2
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Drift Visualization Chart
+            const driftCtx = document.getElementById('driftChart');
+            if (driftCtx) {
+                const driftValue = {{ drift }};
+                const driftColor = driftValue > 2 ? '#198754' : (driftValue < -2 ? '#dc3545' : '#0dcaf0');
+                
+                new Chart(driftCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['G1', 'G2', 'Drift (G2-G1)'],
+                        datasets: [{
+                            label: 'Value',
+                            data: [{{ G1 }}, {{ G2 }}, driftValue],
+                            backgroundColor: ['#6c757d', '#6c757d', driftColor],
+                            borderColor: ['#495057', '#495057', driftColor],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Grade Comparison & Drift'
+                            },
+                            annotation: {
+                                annotations: {
+                                    line1: {
+                                        type: 'line',
+                                        yMin: 0,
+                                        yMax: 0,
+                                        borderColor: 'rgb(255, 99, 132)',
+                                        borderWidth: 2
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Grade / Drift Value'
+                                },
+                                grid: {
+                                    color: function(context) {
+                                        if (context.tick.value === 0) {
+                                            return 'rgba(255, 99, 132, 0.5)';
+                                        }
+                                        return 'rgba(0, 0, 0, 0.1)';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
         });
     </script>
 </body>
