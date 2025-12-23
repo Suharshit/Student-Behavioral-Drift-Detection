@@ -72,6 +72,3 @@ flask run  # or: gunicorn app:app
 - Clip regression outputs to [0, 20] for realism.  
 - Add model versioning and periodic retraining.
 
-## License
-MIT (or specify).***
-
